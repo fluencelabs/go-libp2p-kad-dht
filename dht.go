@@ -207,8 +207,8 @@ func makeDHT(ctx context.Context, h host.Host, cfg config) (*IpfsDHT, error) {
 		return nil, fmt.Errorf("failed to construct routing table,err=%s", err)
 	}
 
-	protocols := []protocol.ID{cfg.protocolPrefix + kad2}
-	serverProtocols := []protocol.ID{cfg.protocolPrefix + kad2, cfg.protocolPrefix + kad1}
+	protocols := []protocol.ID{cfg.protocolPrefix + kad1}
+	serverProtocols := []protocol.ID{cfg.protocolPrefix + kad1}
 
 	// check if custom test protocols were set
 	if len(cfg.testProtocols) > 0 {
