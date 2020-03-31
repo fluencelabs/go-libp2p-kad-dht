@@ -169,15 +169,17 @@ func (dht *IpfsDHT) runQuery(ctx context.Context, target string, queryFn queryFn
 	return res, nil
 }
 
-func recordPeerIsValuable(p peer.ID) {}
+func (q *query) recordPeerIsValuable(p peer.ID) {
+	q.dht.routingTable.IncrementUsefulnessCounter(p)
+}
 
 func (q *query) recordValuablePeers() {
 	closePeers := q.queryPeers.GetClosestNotUnreachable(q.dht.beta)
 	for _, p := range closePeers {
 		referrer := p
-		recordPeerIsValuable(referrer)
+		q.recordPeerIsValuable(referrer)
 		for referrer = q.queryPeers.GetReferrer(referrer); referrer != ""; {
-			recordPeerIsValuable(referrer)
+			q.recordPeerIsValuable(referrer)
 		}
 	}
 }
@@ -348,6 +350,7 @@ func (q *query) queryPeer(ctx context.Context, ch chan<- *queryUpdate, p peer.ID
 
 	// dial the peer
 	if err := q.dht.dialPeer(dialCtx, p); err != nil {
+		q.dht.peerStoppedDHT(q.dht.ctx, p)
 		ch <- &queryUpdate{cause: p, unreachable: []peer.ID{p}}
 		return
 	}
@@ -355,9 +358,13 @@ func (q *query) queryPeer(ctx context.Context, ch chan<- *queryUpdate, p peer.ID
 	// send query RPC to the remote peer
 	newPeers, err := q.queryFn(queryCtx, p)
 	if err != nil {
+		q.dht.peerStoppedDHT(q.dht.ctx, p)
 		ch <- &queryUpdate{cause: p, unreachable: []peer.ID{p}}
 		return
 	}
+
+	// query successful, try to add to RT
+	q.dht.peerFound(q.dht.ctx, p)
 
 	// process new peers
 	saw := []peer.ID{}
