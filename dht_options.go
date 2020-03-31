@@ -40,7 +40,7 @@ type config struct {
 
 	routingTable struct {
 		refreshQueryTimeout time.Duration
-		refreshPeriod       time.Duration
+		refreshInterval     time.Duration
 		autoRefresh         bool
 		latencyTolerance    time.Duration
 	}
@@ -80,7 +80,7 @@ var defaults = func(o *config) error {
 
 	o.routingTable.latencyTolerance = time.Minute
 	o.routingTable.refreshQueryTimeout = 1 * time.Minute
-	o.routingTable.refreshPeriod = 10 * time.Minute
+	o.routingTable.refreshInterval = 10 * time.Minute
 	o.routingTable.autoRefresh = true
 	o.maxRecordAge = time.Hour * 36
 
@@ -138,7 +138,7 @@ func RoutingTableRefreshQueryTimeout(timeout time.Duration) Option {
 //    the last refresh period.
 func RoutingTableRefreshPeriod(period time.Duration) Option {
 	return func(c *config) error {
-		c.routingTable.refreshPeriod = period
+		c.routingTable.refreshInterval = period
 		return nil
 	}
 }

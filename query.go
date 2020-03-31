@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -170,7 +171,7 @@ func (dht *IpfsDHT) runQuery(ctx context.Context, target string, queryFn queryFn
 }
 
 func (q *query) recordPeerIsValuable(p peer.ID) {
-	q.dht.routingTable.IncrementUsefulnessCounter(p)
+	q.dht.routingTable.UpdateLastSuccessfulOutboundQuery(p, time.Now())
 }
 
 func (q *query) recordValuablePeers() {
