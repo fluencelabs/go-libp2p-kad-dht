@@ -117,6 +117,9 @@ var (
 )
 
 // New creates a new DHT with the specified host and options.
+// Please note that being connected to a DHT peer does not necessarily imply that it's also in the DHT Routing Table.
+// If the Routing Table has more than "minRTRefreshThreshold" peers, we consider a peer as a Routing Table candidate ONLY when
+// we successfully get a query response from it OR if it send us a query.
 func New(ctx context.Context, h host.Host, options ...Option) (*IpfsDHT, error) {
 	var cfg config
 	if err := cfg.apply(append([]Option{defaults}, options...)...); err != nil {
@@ -254,7 +257,9 @@ func makeDHT(ctx context.Context, h host.Host, cfg config) (*IpfsDHT, error) {
 }
 
 func makeRoutingTable(dht *IpfsDHT, cfg config) (*kb.RoutingTable, error) {
-	// To grok the Math Wizardy here, please be patient as a document explaining it will
+	// The threshold is calculated based on the expected amount of time that should pass before we
+	// query a peer as part of our refresh cycle.
+	// To grok the Math Wizardy that produced these exact equations, please be patient as a document explaining it will
 	// be published soon.
 	l1 := math.Log(float64(1) / float64(defaultBucketSize))                              //(Log(1/K))
 	l2 := math.Log(float64(1) - (float64(cfg.concurrency) / float64(defaultBucketSize))) // Log(1 - (alpha / K))
@@ -276,8 +281,8 @@ func makeRoutingTable(dht *IpfsDHT, cfg config) (*kb.RoutingTable, error) {
 	return rt, err
 }
 
-// TODO This is hacky AND SHOULD be removed once https://github.com/libp2p/go-libp2p-core/pull/117
-// has landed.
+// TODO This is hacky, horrible and the programmer needs to have his mother called a hamster.
+// SHOULD be removed once https://github.com/libp2p/go-libp2p/issues/800 goes in.
 func (dht *IpfsDHT) persistRTPeersInPeerStore() {
 	tickr := time.NewTicker(peerstore.RecentlyConnectedAddrTTL / 3)
 	defer tickr.Stop()
@@ -287,7 +292,7 @@ func (dht *IpfsDHT) persistRTPeersInPeerStore() {
 		case <-tickr.C:
 			ps := dht.routingTable.ListPeers()
 			for _, p := range ps {
-				dht.peerstore.AddAddrs(p, dht.peerstore.Addrs(p), peerstore.RecentlyConnectedAddrTTL)
+				dht.peerstore.UpdateAddrs(p, peerstore.RecentlyConnectedAddrTTL, peerstore.RecentlyConnectedAddrTTL)
 			}
 		case <-dht.ctx.Done():
 			return
@@ -412,9 +417,7 @@ func (dht *IpfsDHT) peerFound(ctx context.Context, p peer.ID) {
 	b, err := dht.validRTPeer(p)
 	if err != nil {
 		logger.Errorf("failed to validate if peer is a DHT peer, err=%s", err)
-	}
-
-	if b {
+	} else if b {
 		logger.Event(ctx, "peerFound", p)
 		dht.routingTable.TryAddPeer(p)
 	}
