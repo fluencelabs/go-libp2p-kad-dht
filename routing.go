@@ -320,6 +320,7 @@ func (dht *IpfsDHT) getValues(ctx context.Context, key string, nvals int) (<-cha
 
 	// get closest peers in the routing table
 	rtp := dht.routingTable.NearestPeers(kb.ConvertKey(key), AlphaValue)
+	fmt.Printf("nearest peers on getValues: %s", rtp)
 	logger.Debugf("peers in rt: %d %s", len(rtp), rtp)
 	if len(rtp) == 0 {
 		logger.Warning("No peers from routing table!")
