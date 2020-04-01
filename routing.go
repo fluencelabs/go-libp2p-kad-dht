@@ -157,6 +157,7 @@ func (dht *IpfsDHT) GetValue(ctx context.Context, key string, opts ...routing.Op
 }
 
 func (dht *IpfsDHT) SearchValue(ctx context.Context, key string, opts ...routing.Option) (<-chan []byte, error) {
+	fmt.Printf("start searching for %s\n", key)
 	if !dht.enableValues {
 		return nil, routing.ErrNotSupported
 	}
